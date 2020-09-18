@@ -16,14 +16,13 @@ export class ShowABoxComponent implements OnInit {
 
   camera: THREE.PerspectiveCamera
   corners: Array<THREE.Vector3>;
-  lines: Array<THREE.Line>;
-  lline:THREE.Line;
+  lines: Array<Array<THREE.Line>>; // 6 Arrays of 4 lines
   cube: THREE.Mesh;
 
   constructor() { }
 
   ngOnInit() {
-      this.lines = new Array<THREE.Line>();
+      this.lines = new Array<Array<THREE.Line>>();
       this.generateCorners();
       this.showABox_v2();
   }
@@ -66,24 +65,21 @@ export class ShowABoxComponent implements OnInit {
 
     this.addCube(scene);
     this.addVanishingLines(scene, 0);
-    console.log(this.lines.length)
     this.addVanishingLines(scene, 6);
-    console.log(this.lines.length)
-    scene.add(new THREE.AxesHelper(30));
-    let currentMin = this.getClosestCornerToCamera();
+
+    this.lines.forEach((lines)=>lines.forEach(line => scene.add(line)));
+    
+    // scene.add(new THREE.AxesHelper(30));
+    let currentMin = -1;
     var animate = () => {
       requestAnimationFrame( animate );
       
       let minIndex = this.getClosestCornerToCamera();
       if (minIndex != currentMin) {
-        this.lines[2].visible = false;
-        this.lines[5].visible = false;
-        this.lline.visible = false;
-        this.cube.visible = false;
-        debugger;
         console.log(this.camera.position);
         console.log(`CHANGED TO ${minIndex}`);
         currentMin = minIndex;
+        this.hideLines(currentMin);
       }
       renderer.render( scene, this.camera );
     };
@@ -109,11 +105,12 @@ export class ShowABoxComponent implements OnInit {
                 new THREE.Vector3( 0, 10, 0 ), 
                 new THREE.Vector3( 0, 0 , 10 ), 
                 new THREE.Vector3( 0, 10, 10)];
-    let closestPoint_thingy = [[0,0,0], [1,0,0], [1,1,0], [0,1,0], [0,0,1], [1,0,1], [1,1,1], [0,1,1]];
+    let closestPoint_thingy = [[0,0,0], [0,0,1], [0,1,1], [0,1,0], [1,0,0], [1,0,1], [1,1,1], [1,1,0]];
     
     // add 4 lines for each point
     let offset = new Vector3(300,0,0);
     for (let j=0; j<=2; j++) {
+      let sideLines: Array<THREE.Line> = new Array<THREE.Line>();
       var lineMaterial = new THREE.LineBasicMaterial( { color: 0xff << (j*8)} );
 
       let vanishingLines = [];
@@ -125,14 +122,11 @@ export class ShowABoxComponent implements OnInit {
       console.log(vanishingLines.length);
       for (let linePoints of vanishingLines) {
         var geometry = new THREE.BufferGeometry().setFromPoints( linePoints );
-        this.lline = new Line(geometry, lineMaterial);
-        this.lines.push(this.lline);
-        console.log("Adding line", this.lines.length)
-        scene.add(this.lines[this.lines.length-1]);
+        sideLines.push(new Line(geometry, lineMaterial));
       }
-      
+
       offset = this.shiftVector3(offset);
-      console.log(offset);
+      this.lines.push(sideLines);
       // shift points 
       points.map(val => {
         this.shiftVector3(val);
@@ -148,11 +142,11 @@ export class ShowABoxComponent implements OnInit {
 
   addCube(scene: THREE.Scene) {
     var geometry = new THREE.BoxGeometry(10,10,10);
-    geometry.setFromPoints(this.corners);
+    // geometry.setFromPoints(this.corners);
       
     var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
     this.cube = new THREE.Mesh( geometry, material );
-    this.cube.position.set(0,0,0);
+    this.cube.position.set(5,5,5);
 
     scene.add( this.cube );
   }
@@ -183,5 +177,16 @@ export class ShowABoxComponent implements OnInit {
     })
     // debugger;
     return minDistanceIndex;
+  }
+
+  hideLines(closestCorner: number) {
+// 0, 3, 5, 6
+    let closestPoint_thingy = [[0,0,0], [0,0,1], [0,1,1], [0,1,0], [1,0,0], [1,0,1], [1,1,1], [1,1,0]];
+
+    closestPoint_thingy[closestCorner].forEach((val, index) => {
+      this.lines[index].forEach(line => line.visible = val == 0);
+      this.lines[index+3].forEach(line => line.visible = val == 1);
+    })
+
   }
 }
