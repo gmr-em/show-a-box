@@ -1,4 +1,3 @@
-import { visitAll } from '@angular/compiler';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import *  as THREE from 'three';
 import { Line, Vector3 } from 'three';
