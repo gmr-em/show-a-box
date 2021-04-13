@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import *  as THREE from 'three';
 import { Line, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
   templateUrl: './show-a-box.component.html',
   styleUrls: ['./show-a-box.component.scss']
 })
-export class ShowABoxComponent implements OnInit {
+export class ShowABoxComponent implements OnInit, OnDestroy {
   
   @ViewChild('renderer_canvas', {static:true})
   public renderer_canvas: ElementRef<HTMLCanvasElement>;
@@ -17,6 +17,7 @@ export class ShowABoxComponent implements OnInit {
   corners: Array<THREE.Vector3>;
   lines: Array<Array<THREE.Line>>; // 6 Arrays of 4 lines
   cube: THREE.Mesh;
+  reqId: number;
 
   constructor() { }
 
@@ -24,6 +25,10 @@ export class ShowABoxComponent implements OnInit {
       this.lines = new Array<Array<THREE.Line>>();
       this.generateCorners();
       this.showABox_v2();
+  }
+
+  ngOnDestroy() {
+    cancelAnimationFrame(this.reqId);
   }
 
   showBox() {
@@ -40,7 +45,7 @@ export class ShowABoxComponent implements OnInit {
 
 			camera.position.z = 5;
 
-			var animate = function () {
+			var animate = function () {        
 				requestAnimationFrame( animate );
 
 				cube.rotation.x += 0.01;
@@ -71,7 +76,8 @@ export class ShowABoxComponent implements OnInit {
     // scene.add(new THREE.AxesHelper(30));
     let currentMin = -1;
     var animate = () => {
-      requestAnimationFrame( animate );
+      console.log("Hello");
+      this.reqId = requestAnimationFrame( animate );
       
       let minIndex = this.getClosestCornerToCamera();
       if (minIndex != currentMin) {
