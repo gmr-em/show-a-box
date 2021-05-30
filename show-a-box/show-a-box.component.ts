@@ -2,6 +2,8 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import *  as THREE from 'three';
 import { Line, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
+import Stats from 'three/examples/jsm/libs/stats.module';
+import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 
 @Component({
   selector: 'app-show-a-box',
@@ -18,7 +20,15 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
   lines: Array<Array<THREE.Line>>; // 6 Arrays of 4 lines
   cube: THREE.Mesh;
   reqId: number;
-
+  cubeSize: Vector3 = new Vector3(40,20,30);
+  stats: Stats;
+  gui;
+  readonly params = {
+    x: 10,
+    y: 10,
+    z: 10
+  };
+  scene: THREE.Scene = new THREE.Scene();
   constructor() { }
 
   ngOnInit() {
@@ -28,12 +38,12 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     cancelAnimationFrame(this.reqId);
+    this.gui.destroy();
   }
 
   showABox() {
-    var scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0x809090 );
-    // scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
+    this.scene.background = new THREE.Color( 0x809090 );
+    // this.scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
 
     this.camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
     this.camera.position.set( 40, 40, 40 );
@@ -42,17 +52,28 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     var renderer = new THREE.WebGLRenderer({canvas: this.renderer_canvas.nativeElement, antialias: true});
     renderer.setSize(800, 800);
 
-    this.addCube(scene);
-    this.addVanishingLines(scene);
+    this.addCube();
+    this.addVanishingLines();
 
     let ambientLight = new THREE.AmbientLight(0x808080);
-    scene.add(ambientLight);
+    this.scene.add(ambientLight);
     
     let light = new THREE.DirectionalLight(0xF0F0F0);
     light.position.set(50, 200, 100);
-    scene.add(light);
+    this.scene.add(light);
 
-    scene.add(new THREE.AxesHelper(30));
+    this.scene.add(new THREE.AxesHelper(30));
+
+    // performance monitor
+    this.stats = Stats();
+    this.renderer_canvas.nativeElement.parentElement.appendChild( this.stats.dom );
+
+    // GUI
+    this.gui = new GUI();
+    this.gui.add( this.params, 'x' ).name( 'X scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
+    this.gui.add( this.params, 'y' ).name( 'Y scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
+    this.gui.add( this.params, 'z' ).name( 'z scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
+
     let currentMin = -1;
     var animate = () => {
       this.reqId = requestAnimationFrame( animate );     
@@ -65,29 +86,48 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
         currentMin = minIndex;
         this.hideLines(currentMin);
       }
-      renderer.render( scene, this.camera );
+      this.stats.update();
+      renderer.render( this.scene, this.camera );
     };
 
     animate();
   }
 
-  addVanishingLines(scene: THREE.Scene) {
+  onBoxResize() {
+    this.cubeSize = new Vector3(this.params.x, this.params.y, this.params.z);
+    this.recreateScene();
+  }
+  
+  recreateScene() {
+    this.scene.remove(this.cube);
+    this.lines.forEach((lines)=>lines.forEach(line => this.scene.remove(line)));
+    this.lines = [];
+    this.addCube();
+    this.addVanishingLines();
+    this.hideLines(this.getCameraQuadrant());
+  }
+
+  addVanishingLines() {
     // array with the lines towards the vanishing points (Array of 3-> Array of 4 lines -> Array of points)
-    let cubeOffset = 10;
-    let points = [
-                new THREE.Vector3(   ), 
-                new THREE.Vector3( 0, 10, 0  ),
-                new THREE.Vector3( 0, 0 , 10),
-                new THREE.Vector3( 0, 10, 10)];
-    
+    let size = this.cubeSize.clone();
+
     // add 4 lines for each point
     let offset = new Vector3(300,0,0);
+    let pointsTemplates = [
+      new THREE.Vector3( 1, 0, 0 ), 
+      new THREE.Vector3( 1, 1, 0),
+      new THREE.Vector3( 1, 0, 1),
+      new THREE.Vector3( 1, 1, 1)];
     for (let i=0; i<=1; i++) {
       for (let j=0; j<=2; j++) {
+        let points = [];
+        for (let l=0; l<=3; l++) {
+          points.push(pointsTemplates[l].clone().multiply(size));
+        }
         let sideLines: Array<THREE.Line> = new Array<THREE.Line>();
         let color = j == 0 ? 0xff0000 : j == 1 ? 0xff : 0xff00;
         var lineMaterial = new THREE.LineBasicMaterial( { color: color} );
-
+        
         let orientedOffset = new Vector3().add(offset).multiplyScalar(Math.pow(-1, i));
         for (let point of points) {
           var geometry = new THREE.BufferGeometry().setFromPoints( [point, new Vector3().addVectors(point, orientedOffset)] );
@@ -96,13 +136,16 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
 
         offset = this.shiftVector3(offset);
         this.lines.push(sideLines);
-        // shift points 
-        points.map(val => {
+        // shift template
+        pointsTemplates.map(val => {
           this.shiftVector3(val);
         });
       }
+      pointsTemplates.map(val => {
+        val.x = 0;
+      });
     }
-    this.lines.forEach((lines)=>lines.forEach(line => scene.add(line)));
+    this.lines.forEach((lines)=>lines.forEach(line => this.scene.add(line)));
   }
 
   shiftVector3(vec: Vector3) : Vector3 {
@@ -110,26 +153,24 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     return vec;
   }
 
-  addCube(scene: THREE.Scene) {
-    var geometry = new THREE.BoxGeometry(10,10,10);
-    // geometry.setFromPoints(this.corners);
+  addCube() {
+    var geometry = new THREE.BoxGeometry(this.cubeSize.x, this.cubeSize.y, this.cubeSize.z);
 
     var material = new THREE.MeshLambertMaterial( { color: 0x606060 } );
     this.cube = new THREE.Mesh( geometry, material );
-    this.cube.position.set(5,5,5);
+    this.cube.position.copy(this.cubeSize).divideScalar(2);
 
-    scene.add( this.cube );
+    this.scene.add( this.cube );
   }
 
   hideLines(closestCorner: number) {
-    // 0, 3, 5, 6
+    // 0 means line is going towards the positive end of the axis; 1 towards the negative
     let closestPoint_thingy = [[0,0,0], [0,1,0], [1,0,0], [1,1,0], [0,0,1], [0,1,1], [1,0,1], [1,1,1]];
 
     closestPoint_thingy[closestCorner].forEach((val, index) => {
       this.lines[index].forEach(line => line.visible = val == 0);
       this.lines[index+3].forEach(line => line.visible = val == 1);
     })
-
   }
 
   // camera pos is used to know which corner is closest to it
@@ -144,11 +185,11 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
 
   getCameraQuadrant() {
     let cameraPos = this.camera.position;
-    let sx = cameraPos.x > 5 ? 1 : 0 
-    let sy = cameraPos.y > 5 ? 1 : 0
-    let sz = cameraPos.z > 5 ? 1 : 0
+    let sx = cameraPos.x > 0 ? 1 : 0; 
+    let sy = cameraPos.y > 0 ? 1 : 0;
+    let sz = cameraPos.z > 0 ? 1 : 0;
     
-    let index = 4 * sy + 2 * sx + sz
+    let index = 4 * sy + 2 * sx + sz;
     return index
   }
 }
