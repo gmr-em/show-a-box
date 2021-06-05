@@ -20,13 +20,13 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
   lines: Array<Array<THREE.Line>>; // 6 Arrays of 4 lines
   cube: THREE.Mesh;
   reqId: number;
-  cubeSize: Vector3 = new Vector3(40,20,30);
+  cubeSize: Vector3 = new Vector3(30,30,30);
   stats: Stats;
   gui;
   readonly params = {
-    x: 10,
-    y: 10,
-    z: 10
+    x: 30,
+    y: 30,
+    z: 30
   };
   scene: THREE.Scene = new THREE.Scene();
   constructor() { }
@@ -46,7 +46,7 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     // this.scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
 
     this.camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-    this.camera.position.set( 40, 40, 40 );
+    this.camera.position.set( -40, -40, -40 );
     this.camera.lookAt( 0, 0, 0 );
     let controls = new OrbitControls(this.camera, this.renderer_canvas.nativeElement);
     var renderer = new THREE.WebGLRenderer({canvas: this.renderer_canvas.nativeElement, antialias: true});
@@ -62,7 +62,7 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     light.position.set(50, 200, 100);
     this.scene.add(light);
 
-    this.scene.add(new THREE.AxesHelper(30));
+    // this.scene.add(new THREE.AxesHelper(30));
 
     // performance monitor
     this.stats = Stats();
