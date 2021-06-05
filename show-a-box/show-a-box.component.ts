@@ -3,7 +3,7 @@ import *  as THREE from 'three';
 import { Line, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module';
-import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
+import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
 
 @Component({
   selector: 'app-show-a-box',
@@ -13,16 +13,16 @@ import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 export class ShowABoxComponent implements OnInit, OnDestroy {
   
   @ViewChild('renderer_canvas', {static:true})
-  public renderer_canvas: ElementRef<HTMLCanvasElement>;
+  public renderer_canvas!: ElementRef<HTMLCanvasElement>;
 
-  camera: THREE.PerspectiveCamera
-  corners: Array<THREE.Vector3>;
-  lines: Array<Array<THREE.Line>>; // 6 Arrays of 4 lines
-  cube: THREE.Mesh;
-  reqId: number;
+  camera: THREE.PerspectiveCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );;
+  lines: Array<Array<THREE.Line>> = new Array<Array<THREE.Line>>(); // 6 Arrays of 4 lines
+  cube!: THREE.Mesh;
+  reqId!: number;
   cubeSize: Vector3 = new Vector3(30,30,30);
-  stats: Stats;
-  gui;
+  stats!: Stats;
+  gui: GUI = new GUI();
+  renderer!: THREE.WebGLRenderer;
   readonly params = {
     x: 30,
     y: 30,
@@ -32,7 +32,6 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
   constructor() { }
 
   ngOnInit() {
-      this.lines = new Array<Array<THREE.Line>>();
       this.showABox();
   }
 
@@ -45,12 +44,12 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     this.scene.background = new THREE.Color( 0x809090 );
     // this.scene.fog = new THREE.Fog( 0xcce0ff, 500, 10000 );
 
-    this.camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-    this.camera.position.set( -40, -40, -40 );
-    this.camera.lookAt( 0, 0, 0 );
-    let controls = new OrbitControls(this.camera, this.renderer_canvas.nativeElement);
-    var renderer = new THREE.WebGLRenderer({canvas: this.renderer_canvas.nativeElement, antialias: true});
-    renderer.setSize(800, 800);
+    this.camera.position.set( -60, 100, -60 );
+    // this.camera.lookAt( 0, 50, 0 );
+    new OrbitControls(this.camera, this.renderer_canvas.nativeElement);
+    this.renderer = new THREE.WebGLRenderer({canvas: this.renderer_canvas.nativeElement, antialias: true});
+    this.renderer.setPixelRatio( window.devicePixelRatio );
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     this.addCube();
     this.addVanishingLines();
@@ -59,20 +58,20 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     this.scene.add(ambientLight);
     
     let light = new THREE.DirectionalLight(0xF0F0F0);
-    light.position.set(50, 200, 100);
+    light.position.set(-200, 50, -100);
     this.scene.add(light);
 
     // this.scene.add(new THREE.AxesHelper(30));
 
     // performance monitor
     this.stats = Stats();
-    this.renderer_canvas.nativeElement.parentElement.appendChild( this.stats.dom );
+    this.renderer_canvas.nativeElement.parentElement?.appendChild( this.stats.dom );
 
     // GUI
-    this.gui = new GUI();
+    this.gui.close();
     this.gui.add( this.params, 'x' ).name( 'X scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
     this.gui.add( this.params, 'y' ).name( 'Y scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
-    this.gui.add( this.params, 'z' ).name( 'z scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
+    this.gui.add( this.params, 'z' ).name( 'Z scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
 
     let currentMin = -1;
     var animate = () => {
@@ -80,17 +79,26 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
       
       let minIndex = this.getCameraQuadrant();
       if (minIndex != currentMin) {
-        console.log(this.camera.position);
-        console.log(`CHANGED TO ${minIndex}`);
+        // console.log(this.camera.position);
+        // console.log(`CHANGED TO ${minIndex}`);
 
         currentMin = minIndex;
         this.hideLines(currentMin);
       }
       this.stats.update();
-      renderer.render( this.scene, this.camera );
+      this.renderer.render( this.scene, this.camera );
     };
 
     animate();
+
+    window.addEventListener( 'resize', () => this.onWindowResize() );
+  }
+
+  onWindowResize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setSize( window.innerWidth, window.innerHeight );
   }
 
   onBoxResize() {
