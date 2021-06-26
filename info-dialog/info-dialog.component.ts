@@ -11,8 +11,7 @@ export class InfoDialogComponent  {
   constructor(
     public dialogRef: MatDialogRef<InfoDialogComponent>) {}
 
-  onNoClick(): void {
+  onOkClick(): void {
     this.dialogRef.close();
   }
-
 }

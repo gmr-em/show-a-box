@@ -6,6 +6,7 @@ import Stats from 'three/examples/jsm/libs/stats.module';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
 import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { InfoDialogComponent } from '../info-dialog/info-dialog.component';
+import { SettingsDialogComponent } from '../settings-dialog/settings-dialog.component';
 
 @Component({
   selector: 'app-show-a-box',
@@ -30,6 +31,8 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     z: 30
   };
   scene: THREE.Scene = new THREE.Scene();
+  controlsActive:boolean = false;
+
   constructor(public dialog: MatDialog) { }
 
   ngOnInit() {
@@ -75,9 +78,6 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
       
       let minIndex = this.getCameraQuadrant();
       if (minIndex != currentMin) {
-        // console.log(this.camera.position);
-        // console.log(`CHANGED TO ${minIndex}`);
-
         currentMin = minIndex;
         this.hideLines(currentMin);
       }
@@ -197,12 +197,26 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
   }
 
   openInfoDialog() {
-    const dialogRef = this.dialog.open(InfoDialogComponent, {
+    this.dialog.open(InfoDialogComponent, {
       width: '300px'
+    });
+  }
+
+  openSettingsDialog() {
+    const dialogRef = this.dialog.open(SettingsDialogComponent, {
+      width: '300px',
+      data: {controls: this.controlsActive}
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      console.log('The dialog was closed', result);
+      if (result === undefined) return;
+      this.controlsActive = result;
+      if (this.controlsActive) {
+        this.gui.show();
+      }
+      else {
+        this.gui.hide();
+      }
     });
   }
 }
