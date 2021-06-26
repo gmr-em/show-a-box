@@ -1,9 +1,11 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, Inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import *  as THREE from 'three';
 import { Line, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
+import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { InfoDialogComponent } from '../info-dialog/info-dialog.component';
 
 @Component({
   selector: 'app-show-a-box',
@@ -20,7 +22,6 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
   cube!: THREE.Mesh;
   reqId!: number;
   cubeSize: Vector3 = new Vector3(30,30,30);
-  stats!: Stats;
   gui: GUI = new GUI();
   renderer!: THREE.WebGLRenderer;
   readonly params = {
@@ -29,7 +30,7 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     z: 30
   };
   scene: THREE.Scene = new THREE.Scene();
-  constructor() { }
+  constructor(public dialog: MatDialog) { }
 
   ngOnInit() {
       this.showABox();
@@ -61,17 +62,12 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     light.position.set(-200, 50, -100);
     this.scene.add(light);
 
-    // this.scene.add(new THREE.AxesHelper(30));
-
-    // performance monitor
-    this.stats = Stats();
-    this.renderer_canvas.nativeElement.parentElement?.appendChild( this.stats.dom );
-
     // GUI
     this.gui.close();
     this.gui.add( this.params, 'x' ).name( 'X scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
     this.gui.add( this.params, 'y' ).name( 'Y scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
     this.gui.add( this.params, 'z' ).name( 'Z scale' ).min(10).max(100).step(1).onChange(()=> this.onBoxResize());
+    this.gui.hide();
 
     let currentMin = -1;
     var animate = () => {
@@ -85,7 +81,6 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
         currentMin = minIndex;
         this.hideLines(currentMin);
       }
-      this.stats.update();
       this.renderer.render( this.scene, this.camera );
     };
 
@@ -199,5 +194,15 @@ export class ShowABoxComponent implements OnInit, OnDestroy {
     
     let index = 4 * sy + 2 * sx + sz;
     return index
+  }
+
+  openInfoDialog() {
+    const dialogRef = this.dialog.open(InfoDialogComponent, {
+      width: '300px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('The dialog was closed', result);
+    });
   }
 }
